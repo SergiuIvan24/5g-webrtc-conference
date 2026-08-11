@@ -3,10 +3,11 @@ package com.example.demo.controller;
 import com.example.demo.service.FreeSwitchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,18 +20,27 @@ public class WebController {
     @Autowired
     private FreeSwitchService freeSwitchService;
 
+    // Landing page: Pagina unde utilizatorul alege sau creează o conferință
     @GetMapping("/")
     public String home() {
         return "index";
     }
 
+    // Rută dinamică: /room/3000 sau /room/Proiect5G
+    @GetMapping("/room/{roomName}")
+    public String joinRoom(@PathVariable String roomName, Model model) {
+        // Trimitem numele camerei către frontend
+        model.addAttribute("roomName", roomName);
+        return "room";
+    }
+
+    // Endpoint-urile vechi rămân complet intacte
     @GetMapping(value = "/api/participanti/{room}", produces = "application/json")
     @ResponseBody
     public List<Map<String, String>> getParticipanti(@PathVariable String room) {
         String rawOutput = freeSwitchService.getConferenceParticipants(room);
         List<Map<String, String>> participants = new ArrayList<>();
 
-        // Afișăm în consola IntelliJ ce răspunde FreeSWITCH (foarte util pentru diagnosticare)
         System.out.println("Răspuns FS pentru camera " + room + ":\n" + rawOutput);
 
         if (rawOutput == null || rawOutput.trim().isEmpty()) {
@@ -39,7 +49,6 @@ public class WebController {
 
         String[] lines = rawOutput.split("\n");
         for (String line : lines) {
-            // Căutăm direct liniile cu datele participanților (au ;)
             if (line.contains(";") && !line.startsWith("+OK")) {
                 String[] parts = line.split(";");
                 if (parts.length >= 6) {
@@ -48,6 +57,18 @@ public class WebController {
                     pInfo.put("ext", parts[3]);
                     pInfo.put("channel", parts[1]);
                     pInfo.put("permissions", parts[5]);
+
+                    String webName = null;
+                    for (String part : parts) {
+                        if (part.startsWith("WEB-")) {
+                            webName = part;
+                            break;
+                        }
+                    }
+                    boolean hasVideo = webName != null;
+                    pInfo.put("name", hasVideo ? webName.substring(4) : parts[3]);
+                    pInfo.put("hasVideo", String.valueOf(hasVideo));
+
                     participants.add(pInfo);
                 }
             }

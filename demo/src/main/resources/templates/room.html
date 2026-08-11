@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Sala <span th:text="${roomName}"></span> - Conferință 5G</title>
+    <script src="/js/jssip.bundle.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 40px; background-color: #f8f9fa; }
+
+        /* Layout Containere */
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 0 auto; width: 85%; max-width: 600px; }
+
+        button { padding: 12px 22px; font-size: 16px; margin: 6px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn-join { background-color: #0056b3; color: white; }
+        .btn-hangup { background-color: #dc3545; color: white; }
+        .btn-mute { background-color: #495057; color: white; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; box-shadow: none; }
+
+        #status { margin-top: 15px; font-weight: bold; color: #555; font-size: 1.1em; }
+
+        /* Dashboard & Chat Styles */
+        #dashboard-wrapper, #chat-wrapper { margin: 30px auto; width: 85%; max-width: 1000px; text-align: left; }
+        h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; font-size: 22px; }
+        table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background-color: #0056b3; color: white; font-weight: normal; }
+        tr:hover { background-color: #f4f6f8; }
+        .empty-message { text-align: center; color: #888; font-style: italic; padding: 30px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        #chat-messages { height: 260px; overflow-y: auto; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); padding: 12px; margin-bottom: 10px; }
+        .chat-message { margin-bottom: 6px; font-size: 14px; }
+        .chat-message.own .chat-sender { color: #28a745; }
+        .chat-message.system { color: #999; font-style: italic; font-size: 12px; text-align: center; }
+        .chat-sender { font-weight: bold; color: #0056b3; }
+        #chat-input-row { display: flex; gap: 8px; }
+        #chat-input { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        #chat-input-row button { margin: 0; padding: 10px 16px; background-color: #0056b3; color: white; }
+    </style>
+</head>
+<body>
+
+<!-- SECȚIUNEA 1: LOBBY -->
+<div id="lobby-screen" class="card">
+    <h2 style="border: none; text-align: center;">Pregătire Conferință</h2>
+    <p>Urmează să intri în camera: <strong style="color: #28a745; font-size: 20px;" th:text="${roomName}"></strong></p>
+
+    <div style="margin-top: 20px;">
+        <label style="font-weight: bold; display: block; margin-bottom: 10px;">Cum te numești?</label>
+        <input type="text" id="lobby-name" placeholder="Ex: Ion Popescu" style="padding: 10px; font-size: 16px; width: 80%; border-radius: 6px; border: 1px solid #ccc; text-align: center;">
+    </div>
+
+    <div style="margin-top: 25px;">
+        <button class="btn-join" onclick="joinFromLobby()">🚀 Intră în Conferință</button>
+    </div>
+</div>
+
+<!-- SECȚIUNEA 2: CONFERINȚA (ascunsă inițial) -->
+<div id="conference-screen" style="display: none;">
+    <h1>Conferință: <span th:text="${roomName}"></span></h1>
+
+    <button id="btn-hangup" class="btn-hangup" onclick="hangUp()">❌ Părăsește Apelul</button>
+    <button id="btn-mute" class="btn-mute" onclick="toggleMic()">🎙️ Mute</button>
+
+    <div id="status">Status: Inițializare...</div>
+
+    <audio id="audio-remote" autoplay></audio>
+
+    <div id="dashboard-wrapper">
+        <h2>📡 Monitorizare Live Conferință</h2>
+        <div id="dashboard-container">
+            <div class="empty-message">Se așteaptă datele de la server...</div>
+        </div>
+    </div>
+
+    <div id="chat-wrapper" class="card" style="max-width: 500px;">
+        <h2 style="border: none; margin-top: 0;">💬 Chat</h2>
+        <div id="chat-messages"></div>
+        <div id="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Scrie un mesaj...">
+            <button class="btn-join" onclick="sendChatMessage()">Trimite</button>
+        </div>
+    </div>
+</div>
+
+<!-- PANOUL DE TELEMETRIE 5G QoS -->
+<div id="qos-wrapper" class="card" style="margin-top: 20px; border-left: 5px solid #28a745; background: #222; color: #00ffcc; text-align: left; font-family: monospace;">
+    <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #444; padding-bottom: 5px;">📊 Telemetrie 5G / WebRTC QoS</h3>
+    <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Latență (RTT):</span><br>
+            <strong id="qos-rtt" style="font-size: 1.2em;">-- ms</strong>
+        </div>
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Jitter Audio:</span><br>
+            <strong id="qos-jitter" style="font-size: 1.2em;">-- ms</strong>
+        </div>
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Pachete Pierdute:</span><br>
+            <strong id="qos-loss" style="font-size: 1.2em;">0</strong>
+        </div>
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Codec Nativ:</span><br>
+            <strong id="qos-codec" style="font-size: 1.2em;">Detectare...</strong>
+        </div>
+    </div>
+</div>
+
+<!-- Salvăm numele camerei într-o variabilă globală JS pentru a fi preluată de app.js -->
+<script th:inline="javascript">
+    const currentRoomName = /*[[${roomName}]]*/ '3000';
+</script>
+<script src="/js/app.js"></script>
+
+<script>
+    let dashboardInterval;
+
+    function startDashboardUpdates() {
+        updateDashboard();
+        dashboardInterval = setInterval(updateDashboard, 2000);
+    }
+
+    function stopDashboardUpdates() {
+        clearInterval(dashboardInterval);
+    }
+
+    function updateDashboard() {
+        fetch('/api/participanti/' + currentRoomName + '?t=' + new Date().getTime(), { cache: 'no-store' })
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('dashboard-container');
+                if (data.length === 0) {
+                    container.innerHTML = `<div class="empty-message">Conferința este momentan goală sau inactivă.</div>`;
+                    return;
+                }
+
+                let html = '<table><tr><th>ID</th><th>Nume / Extensie</th><th>Canal</th><th>Permisiuni</th><th>Acțiuni</th></tr>';
+                data.forEach(p => {
+                    html += `<tr>
+                                <td><strong>${p.id}</strong></td>
+                                <td>${p.name || p.ext}</td>
+                                <td>${p.channel}</td>
+                                <td>${p.permissions}</td>
+                                <td>
+                                    <button style="padding: 5px 10px; margin: 2px;" onclick="muteUser('${p.id}')">🔇 Mute/Unmute</button>
+                                    <button style="padding: 5px 10px; margin: 2px; background: darkred; color: white;" onclick="kickUser('${p.id}')">⛔ Kick</button>
+                                </td>
+                             </tr>`;
+                });
+                html += '</table>';
+                container.innerHTML = html;
+            }).catch(err => console.error(err));
+    }
+
+    function muteUser(id) { fetch('/api/mute/' + currentRoomName + '/' + id, { method: 'POST' }); }
+    function kickUser(id) { fetch('/api/kick/' + currentRoomName + '/' + id, { method: 'POST' }); }
+</script>
+
+</body>
+</html>

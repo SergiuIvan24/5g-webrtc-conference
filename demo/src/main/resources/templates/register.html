@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Creare Cont - Conferințe 5G</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 100px; background-color: #f8f9fa; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block; width: 300px; }
+        h1 { color: #0056b3; margin-top: 0; font-size: 24px; }
+        input { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; margin-bottom: 15px;}
+        button { padding: 12px; font-size: 18px; background-color: #0056b3; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;}
+        button:hover { background-color: #004494; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;}
+        a { color: #555; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h1>Creare Cont Nou</h1>
+
+    <div th:if="${param.error}" class="error">
+        Acest nume de utilizator există deja!
+    </div>
+
+    <form th:action="@{/register}" method="post">
+        <input type="text" name="username" placeholder="Alege un username (ex: ion123)" required>
+        <input type="password" name="password" placeholder="Alege o parolă" required>
+        <input type="text" name="displayName" placeholder="Numele afișat (ex: Ion Popescu)" required>
+        <button type="submit">Înregistrează-te</button>
+    </form>
+
+    <a href="/login">Ai deja cont? Întoarce-te la conectare</a>
+</div>
+
+</body>
+</html>

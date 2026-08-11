@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ro" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Autentificare - Conferințe 5G</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 100px; background-color: #f8f9fa; }
+        .auth-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: inline-block; width: 300px; }
+        h1 { color: #0056b3; margin-top: 0; }
+        input { padding: 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; margin-bottom: 15px;}
+        button { padding: 12px; font-size: 18px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;}
+        button:hover { background-color: #218838; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;}
+        .success { color: #28a745; background: #d4edda; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 14px;}
+        a { color: #0056b3; text-decoration: none; font-size: 14px; display: inline-block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="auth-card">
+    <h1>Conectare</h1>
+
+    <!-- Afișăm erori dacă utilizatorul a greșit parola -->
+    <div th:if="${param.error}" class="error">
+        Username sau parolă incorectă!
+    </div>
+
+    <!-- Afișăm succes dacă tocmai și-a creat contul -->
+    <div th:if="${param.success}" class="success">
+        Cont creat cu succes! Te poți loga.
+    </div>
+
+    <form th:action="@{/login}" method="post">
+        <input type="text" name="username" placeholder="Nume de utilizator" required>
+        <input type="password" name="password" placeholder="Parola" required>
+        <button type="submit">Log in</button>
+    </form>
+
+    <a href="/register">Nu ai cont? Înregistrează-te</a>
+</div>
+
+</body>
+</html>
