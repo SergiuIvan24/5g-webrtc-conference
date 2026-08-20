@@ -19,8 +19,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(chatWebSocketHandler, "/ws/chat/{room}")
-                // setAllowedOrigins("*") e ok pentru laborator; într-un mediu real
-                // ai restrânge la domeniul tău
                 .setAllowedOrigins("*");
     }
 }

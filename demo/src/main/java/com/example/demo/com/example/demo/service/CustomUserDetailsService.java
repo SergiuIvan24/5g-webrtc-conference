@@ -19,7 +19,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Utilizatorul nu a fost găsit!"));
 
-        // Transformăm utilizatorul nostru din MySQL într-un format pe care îl înțelege Spring Security
         return org.springframework.security.core.userdetails.User
                 .withUsername(user.getUsername())
                 .password(user.getPassword())

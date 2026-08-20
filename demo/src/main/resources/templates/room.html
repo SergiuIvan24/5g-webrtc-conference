@@ -7,7 +7,6 @@
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; margin-top: 40px; background-color: #f8f9fa; }
 
-        /* Layout Containere */
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 0 auto; width: 85%; max-width: 600px; }
 
         button { padding: 12px 22px; font-size: 16px; margin: 6px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -18,7 +17,6 @@
 
         #status { margin-top: 15px; font-weight: bold; color: #555; font-size: 1.1em; }
 
-        /* Dashboard & Chat Styles */
         #dashboard-wrapper, #chat-wrapper { margin: 30px auto; width: 85%; max-width: 1000px; text-align: left; }
         h2 { color: #0056b3; border-bottom: 2px solid #0056b3; padding-bottom: 10px; font-size: 22px; }
         table { width: 100%; border-collapse: collapse; background-color: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden; }
@@ -39,7 +37,6 @@
 </head>
 <body>
 
-<!-- SECȚIUNEA 1: LOBBY -->
 <div id="lobby-screen" class="card">
     <h2 style="border: none; text-align: center;">Pregătire Conferință</h2>
     <p>Urmează să intri în camera: <strong style="color: #28a745; font-size: 20px;" th:text="${roomName}"></strong></p>
@@ -54,7 +51,6 @@
     </div>
 </div>
 
-<!-- SECȚIUNEA 2: CONFERINȚA (ascunsă inițial) -->
 <div id="conference-screen" style="display: none;">
     <h1>Conferință: <span th:text="${roomName}"></span></h1>
 
@@ -82,9 +78,10 @@
     </div>
 </div>
 
-<!-- PANOUL DE TELEMETRIE 5G QoS -->
 <div id="qos-wrapper" class="card" style="margin-top: 20px; border-left: 5px solid #28a745; background: #222; color: #00ffcc; text-align: left; font-family: monospace;">
     <h3 style="margin-top: 0; color: #fff; border-bottom: 1px solid #444; padding-bottom: 5px;">📊 Telemetrie 5G / WebRTC QoS</h3>
+
+    <!-- Rândul 1: Metricile clasice -->
     <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
         <div style="padding: 10px;">
             <span style="color: #aaa;">Latență (RTT):</span><br>
@@ -103,9 +100,24 @@
             <strong id="qos-codec" style="font-size: 1.2em;">Detectare...</strong>
         </div>
     </div>
+
+    <!-- Rândul 2: Metricile noi (Audio HD și MOS) -->
+    <div style="display: flex; justify-content: space-between; flex-wrap: wrap; border-top: 1px dashed #444; padding-top: 10px;">
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Frecvență (Quality):</span><br>
+            <strong id="qos-samplerate" style="font-size: 1.2em; color: #17a2b8;">-- kHz</strong>
+        </div>
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Lățime Bandă (Bitrate):</span><br>
+            <strong id="qos-bitrate" style="font-size: 1.2em; color: #17a2b8;">-- kbps</strong>
+        </div>
+        <div style="padding: 10px;">
+            <span style="color: #aaa;">Scor MOS (1-5):</span><br>
+            <strong id="qos-mos" style="font-size: 1.3em; color: #28a745;">--</strong>
+        </div>
+    </div>
 </div>
 
-<!-- Salvăm numele camerei într-o variabilă globală JS pentru a fi preluată de app.js -->
 <script th:inline="javascript">
     const currentRoomName = /*[[${roomName}]]*/ '3000';
 </script>

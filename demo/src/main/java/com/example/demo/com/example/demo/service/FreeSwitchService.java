@@ -14,10 +14,8 @@ public class FreeSwitchService {
     public void connectToFreeSwitch() {
         try {
             eslClient = new Client();
-            // Ne conectăm direct la portul de control
             eslClient.connect("172.22.0.50", 8021, "ClueCon", 10);
 
-            // Folosim direct string-ul "plain" pentru formatul evenimentelor
             eslClient.setEventSubscriptions("plain", "all");
             System.out.println("✅ CONECTAT CU SUCCES LA FREESWITCH ESL!");
 
@@ -31,12 +29,11 @@ public class FreeSwitchService {
             EslMessage response = eslClient.sendSyncApiCommand("conference", "list");
             if (response != null && !response.getBodyLines().isEmpty()) {
                 for (String line : response.getBodyLines()) {
-                    // Căutăm camera care începe exact cu numărul dorit
                     if (line.startsWith("+OK Conference " + roomNumber + "-") ||
                             line.startsWith("+OK Conference " + roomNumber + " ")) {
                         String[] parts = line.split(" ");
                         if (parts.length >= 3) {
-                            return parts[2]; // ex: "3000-172.22.0.50"
+                            return parts[2];
                         }
                     }
                 }
@@ -47,10 +44,9 @@ public class FreeSwitchService {
         return null;
     }
 
-    // Acum primește numărul camerei (ex: "3000")
     public String getConferenceParticipants(String roomNumber) {
         String exactName = getExactConferenceName(roomNumber);
-        if (exactName == null) return ""; // Nu s-a găsit conferința
+        if (exactName == null) return "";
 
         EslMessage response = eslClient.sendSyncApiCommand("conference", exactName + " list");
         if (response != null) {

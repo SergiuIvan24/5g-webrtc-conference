@@ -18,37 +18,32 @@ public class AuthController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Afișează pagina de Login
     @GetMapping("/login")
     public String showLoginForm() {
         return "login";
     }
 
-    // Afișează pagina de Înregistrare
     @GetMapping("/register")
     public String showRegisterForm() {
         return "register";
     }
 
-    // Procesează datele când apeși "Creare Cont"
     @PostMapping("/register")
     public String registerUser(@RequestParam String username,
                                @RequestParam String password,
                                @RequestParam String displayName) {
 
-        // Verificăm dacă user-ul există deja
         if (userRepository.findByUsername(username).isPresent()) {
             return "redirect:/register?error=exists";
         }
 
-        // Creăm user-ul și îi criptăm parola
         User newUser = new User();
         newUser.setUsername(username);
         newUser.setDisplayName(displayName);
-        newUser.setPassword(passwordEncoder.encode(password)); // NICIODATĂ nu salvăm parola în clar!
+        newUser.setPassword(passwordEncoder.encode(password));
 
-        userRepository.save(newUser); // Salvăm în MySQL
+        userRepository.save(newUser);
 
-        return "redirect:/login?success=true"; // Îl trimitem la login
+        return "redirect:/login?success=true";
     }
 }

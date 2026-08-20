@@ -11,17 +11,13 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
-
-    // Funcția care criptează parolele (să nu apară în clar în MySQL)
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // Configurăm provider-ul care verifică parolele
     @Bean
     public DaoAuthenticationProvider authenticationProvider(CustomUserDetailsService userDetailsService) {
-        // Punem userDetailsService direct in constructor!
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
@@ -30,14 +26,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // Dezactivat doar pentru simplitate în laborator
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/register", "/css/**", "/js/**").permitAll() // La aceste pagini au voie toți (anonimi)
-                        .anyRequest().authenticated() // Pentru ORICE altceva (inclusiv /room/3000), trebuie să fii logat!
+                        .requestMatchers("/", "/register", "/css/**", "/js/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login") // Pagina noastră custom de login
-                        .defaultSuccessUrl("/", true) // Unde te trimite după ce bagi parola corectă
+                        .defaultSuccessUrl("/", true)
                         .permitAll()
                 )
                 .logout(logout -> logout

@@ -11,18 +11,16 @@ public class User {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String username; // Adresa de email sau user-ul de login
+    private String username;
 
     @Column(nullable = false)
-    private String password; // Parola (o vom cripta la faza 2)
+    private String password;
 
     @Column(nullable = false)
-    private String displayName; // Numele frumos (ex: "Ion Popescu")
+    private String displayName;
 
-    // Constructori
     public User() {}
 
-    // Getteri și Setteri
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 

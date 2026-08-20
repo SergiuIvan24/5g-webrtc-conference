@@ -20,21 +20,17 @@ public class WebController {
     @Autowired
     private FreeSwitchService freeSwitchService;
 
-    // Landing page: Pagina unde utilizatorul alege sau creează o conferință
     @GetMapping("/")
     public String home() {
         return "index";
     }
 
-    // Rută dinamică: /room/3000 sau /room/Proiect5G
     @GetMapping("/room/{roomName}")
     public String joinRoom(@PathVariable String roomName, Model model) {
-        // Trimitem numele camerei către frontend
         model.addAttribute("roomName", roomName);
         return "room";
     }
 
-    // Endpoint-urile vechi rămân complet intacte
     @GetMapping(value = "/api/participanti/{room}", produces = "application/json")
     @ResponseBody
     public List<Map<String, String>> getParticipanti(@PathVariable String room) {

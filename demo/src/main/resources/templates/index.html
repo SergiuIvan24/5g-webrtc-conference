@@ -11,7 +11,12 @@
         button { padding: 12px 25px; font-size: 18px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;}
         button:hover { background-color: #218838; }
 
+        /* Stil nou pentru butonul de ștergere */
+        .btn-danger { background-color: #dc3545; font-size: 14px; padding: 8px 16px; margin-top: 15px;}
+        .btn-danger:hover { background-color: #c82333; }
+
         .history-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 80%; max-width: 600px; margin: 0 auto; text-align: left; }
+        .history-header { display: flex; justify-content: space-between; align-items: center; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 10px; border-bottom: 1px solid #eee; text-align: left; }
         th { background-color: #0056b3; color: white; }
@@ -29,8 +34,12 @@
 </div>
 
 <div class="history-card" id="history-section" style="display: none;">
-    <h2 style="margin-top: 0; color: #0056b3;">Istoricul Apelurilor Tale</h2>
-    <div id="history-table-container">Se încarcă istoricul...</div>
+    <!-- Am adăugat un header flex ca butonul să stea frumos în dreapta titlului -->
+    <div class="history-header">
+        <h2 style="margin-top: 0; margin-bottom: 0; color: #0056b3;">Istoricul Apelurilor Tale</h2>
+        <button id="clear-btn" class="btn-danger" onclick="clearHistory()" style="display: none;">Șterge Istoric</button>
+    </div>
+    <div id="history-table-container" style="margin-top: 15px;">Se încarcă istoricul...</div>
 </div>
 
 <script>
@@ -46,7 +55,29 @@
         if(e.key === 'Enter') goToRoom();
     }
 
-    // Încărcăm istoricul dacă utilizatorul are deja un nume salvat
+    // Funcția nouă de ștergere
+    function clearHistory() {
+        const savedName = localStorage.getItem('demo-display-name');
+        if (!savedName) return;
+
+        if (!confirm('Ești sigur că vrei să ștergi tot istoricul apelurilor?')) return;
+
+        fetch('/api/history/' + encodeURIComponent(savedName), {
+            method: 'DELETE'
+        })
+            .then(res => {
+                if (res.ok) {
+                    document.getElementById('history-table-container').innerHTML = '<p style="color: #666; font-style: italic;">Istoricul a fost șters cu succes.</p>';
+                    document.getElementById('clear-btn').style.display = 'none'; // Ascundem butonul după ștergere
+                } else {
+                    alert('A apărut o eroare la ștergerea istoricului din baza de date.');
+                }
+            })
+            .catch(err => {
+                alert('Eroare de conexiune cu serverul.');
+            });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const savedName = localStorage.getItem('demo-display-name');
         if (savedName) {
@@ -56,10 +87,15 @@
                 .then(res => res.json())
                 .then(data => {
                     const container = document.getElementById('history-table-container');
+                    const clearBtn = document.getElementById('clear-btn');
+
                     if (data.length === 0) {
                         container.innerHTML = '<p style="color: #666; font-style: italic;">Nu ai niciun apel înregistrat încă.</p>';
+                        clearBtn.style.display = 'none';
                         return;
                     }
+
+                    clearBtn.style.display = 'block'; // Arătăm butonul doar dacă există apeluri
 
                     let html = '<table><tr><th>Data și Ora</th><th>Sala</th></tr>';
                     data.forEach(call => {

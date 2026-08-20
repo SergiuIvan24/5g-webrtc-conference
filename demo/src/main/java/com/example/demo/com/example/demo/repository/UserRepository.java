@@ -5,6 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    // Această metodă ne va ajuta la faza de Login să găsim user-ul în baza de date
     Optional<User> findByUsername(String username);
 }

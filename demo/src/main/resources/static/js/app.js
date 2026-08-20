@@ -1,16 +1,14 @@
-// ============================================================
-// VARIABILE GLOBALE & LOBBY LOGIC
-// ============================================================
 let ua = null;
 let activeSession = null;
 let chatSocket = null;
 let displayName = '';
 let micMuted = false;
-let qosInterval = null; // Stochează timer-ul pentru telemetrie
+let qosInterval = null;
+let prevBytesReceived = 0;
+let prevTimestamp = 0;
 const socket = new JsSIP.WebSocketInterface('ws://172.22.0.50:5066');
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Încărcăm numele anterior dacă există în localStorage
     const savedName = localStorage.getItem('demo-display-name');
     if (savedName) {
         document.getElementById('lobby-name').value = savedName;
@@ -34,27 +32,21 @@ function joinFromLobby() {
     displayName = inputName;
     localStorage.setItem('demo-display-name', displayName);
 
-    // Schimbăm vizibilitatea ecranelor
     document.getElementById('lobby-screen').style.display = 'none';
     document.getElementById('conference-screen').style.display = 'block';
 
-    // Pornim dashboard-ul HTML (funcția din room.html)
     if (typeof startDashboardUpdates === "function") {
         startDashboardUpdates();
     }
 
-    // Inițializăm clientul SIP
     initSipClient();
-    // Trimitem informația către baza de date MySQL
+
     fetch(`/api/history/save?username=${encodeURIComponent(displayName)}&room=${encodeURIComponent(currentRoomName)}`, {
         method: 'POST'
     }).then(() => console.log("Istoric salvat în DB!"))
         .catch(err => console.error("Eroare la salvarea istoricului:", err));
 }
 
-// ============================================================
-// CONFIGURARE SIP / JsSIP
-// ============================================================
 function initSipClient() {
     const sipDisplayName = 'WEB-' + displayName;
     const configuration = {
@@ -71,7 +63,7 @@ function initSipClient() {
 
     ua.on('connected', function () {
         document.getElementById('status').innerText = 'Status: Conectat la server. Se inițiază apelul...';
-        makeCall(); // Când s-a conectat la FreeSWITCH, sună automat
+        makeCall();
     });
 
     ua.on('disconnected', function () {
@@ -90,11 +82,7 @@ function initSipClient() {
     ua.start();
 }
 
-// ============================================================
-// APEL (AUDIO)
-// ============================================================
 function makeCall() {
-    // currentRoomName este definită global în room.html via Thymeleaf
     const target = `sip:${currentRoomName}@172.22.0.50`;
     const options = {
         mediaConstraints: { audio: true, video: false },
@@ -145,7 +133,6 @@ function hangUp() {
         activeSession.terminate();
     }
     disconnectChat();
-    // Redirect înapoi la lobby (opțional)
     window.location.href = "/";
 }
 
@@ -175,9 +162,6 @@ function resetUI() {
     stopQoSMonitor();
 }
 
-// ============================================================
-// CHAT TEXT
-// ============================================================
 function connectChat(room) {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const wsUrl = `${protocol}://${window.location.host}/ws/chat/${room}`;
@@ -243,50 +227,84 @@ function appendSystemMessage(text) {
     container.scrollTop = container.scrollHeight;
 }
 
-// ============================================================
-// MONITORIZARE TELEMETRIE (QoS 5G)
-// ============================================================
 function startQoSMonitor() {
     if (!activeSession || !activeSession.connection) return;
 
-    // Citim senzorii rețelei o dată pe secundă
     qosInterval = setInterval(() => {
         activeSession.connection.getStats(null).then(stats => {
-            stats.forEach(report => {
+            let rtt = 0, jitter = 0, loss = 0;
 
-                // 1. Latența (Round Trip Time) din conexiunea candidatului activ
+            stats.forEach(report => {
+                // Latență (RTT)
                 if (report.type === 'candidate-pair' && report.state === 'succeeded') {
                     if (report.currentRoundTripTime !== undefined) {
-                        const rtt = (report.currentRoundTripTime * 1000).toFixed(1);
-                        document.getElementById('qos-rtt').innerText = rtt + ' ms';
+                        rtt = report.currentRoundTripTime * 1000;
+                        document.getElementById('qos-rtt').innerText = rtt.toFixed(1) + ' ms';
                     }
                 }
 
-                // 2. Jitter și Pachete Pierdute (Pachete primite de la Kamailio/FreeSWITCH)
+                // Jitter, Pachete pierdute și BITRATE
                 if (report.type === 'inbound-rtp' && report.kind === 'audio') {
                     if (report.jitter !== undefined) {
-                        const jitter = (report.jitter * 1000).toFixed(2);
-                        document.getElementById('qos-jitter').innerText = jitter + ' ms';
+                        jitter = report.jitter * 1000;
+                        document.getElementById('qos-jitter').innerText = jitter.toFixed(2) + ' ms';
                     }
                     if (report.packetsLost !== undefined) {
-                        document.getElementById('qos-loss').innerText = report.packetsLost;
+                        loss = report.packetsLost;
+                        const elLoss = document.getElementById('qos-loss');
+                        elLoss.innerText = loss;
+                        elLoss.style.color = loss > 5 ? '#dc3545' : '#20c997'; // roșu dacă pierdem pachete, verde altfel
+                    }
 
-                        // Dacă pierdem pachete, facem textul roșu pentru avertizare
-                        if(report.packetsLost > 5) {
-                            document.getElementById('qos-loss').style.color = 'red';
+                    // Calcul Audio Bitrate
+                    const now = report.timestamp;
+                    const bytes = report.bytesReceived;
+                    if (prevTimestamp && prevBytesReceived) {
+                        const diffTime = now - prevTimestamp; // diferența de timp în ms
+                        const diffBytes = bytes - prevBytesReceived; // diferența de octeți
+                        if (diffTime > 0) {
+                            const kbps = ((diffBytes * 8) / diffTime).toFixed(1);
+                            const elBitrate = document.getElementById('qos-bitrate');
+                            if(elBitrate) elBitrate.innerText = kbps + ' kbps';
                         }
                     }
+                    prevBytesReceived = bytes;
+                    prevTimestamp = now;
                 }
 
-                // 3. Detectarea Codec-ului de voce negociat
+                // Codec și SAMPLE RATE
                 if (report.type === 'codec' && report.mimeType) {
-                    // Căutăm doar codecurile audio (ex: audio/PCMU, audio/OPUS)
                     if (report.mimeType.toLowerCase().includes('audio')) {
                         const codecName = report.mimeType.split('/')[1];
                         document.getElementById('qos-codec').innerText = codecName;
+
+                        if (report.clockRate) {
+                            const khz = (report.clockRate / 1000).toFixed(1);
+                            const elSample = document.getElementById('qos-samplerate');
+                            if(elSample) elSample.innerText = khz + ' kHz';
+                        }
                     }
                 }
             });
+
+            // Calcul MOS (Mean Opinion Score) - Bonus pentru lucrare!
+            // Formula estimativă bazată pe RTT și Jitter
+            const elMos = document.getElementById('qos-mos');
+            if (elMos && rtt >= 0) {
+                let effectiveLatency = rtt + (jitter * 2) + 10;
+                let rFactor = 93.2 - (effectiveLatency / 40);
+                rFactor = rFactor - (loss * 2.5); // penalizăm pentru pachete pierdute
+
+                let mos = 1.0;
+                if (rFactor > 0) {
+                    mos = 1 + (0.035 * rFactor) + (rFactor * (rFactor - 60) * (100 - rFactor) * 0.000007);
+                }
+                mos = Math.max(1, Math.min(mos, 5)); // Încadrăm între 1 și 5
+
+                elMos.innerText = mos.toFixed(2);
+                elMos.style.color = mos > 4.0 ? '#20c997' : (mos > 3.0 ? '#ffc107' : '#dc3545');
+            }
+
         }).catch(err => console.error("Eroare citire telemetrie:", err));
     }, 1000);
 }
@@ -296,11 +314,19 @@ function stopQoSMonitor() {
         clearInterval(qosInterval);
         qosInterval = null;
     }
-    // Resetăm afișajul
-    document.getElementById('qos-rtt').innerText = '-- ms';
-    document.getElementById('qos-jitter').innerText = '-- ms';
-    document.getElementById('qos-loss').innerText = '0';
-    document.getElementById('qos-codec').innerText = 'Detectare...';
+    prevBytesReceived = 0;
+    prevTimestamp = 0;
+
+    // Resetăm valorile pe UI
+    const resetVal = (id, val) => { if(document.getElementById(id)) document.getElementById(id).innerText = val; };
+
+    resetVal('qos-rtt', '-- ms');
+    resetVal('qos-jitter', '-- ms');
+    resetVal('qos-loss', '0');
+    resetVal('qos-codec', 'Detectare...');
+    resetVal('qos-bitrate', '-- kbps');
+    resetVal('qos-samplerate', '-- kHz');
+    resetVal('qos-mos', '--');
 }
 
 function escapeHtml(str) {

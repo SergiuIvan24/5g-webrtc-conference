@@ -15,7 +15,6 @@ public class HistoryController {
     @Autowired
     private CallHistoryRepository historyRepository;
 
-    // Salvează un apel nou în baza de date
     @PostMapping("/save")
     public String saveHistory(@RequestParam String username, @RequestParam String room) {
         CallHistory history = new CallHistory();
@@ -26,8 +25,11 @@ public class HistoryController {
         historyRepository.save(history);
         return "Salvat cu succes!";
     }
-
-    // Returnează istoricul pentru un anumit utilizator
+    @DeleteMapping("/{username}")
+    public String clearHistory(@PathVariable String username) {
+        historyRepository.deleteAll(historyRepository.findByUsernameOrderByJoinTimeDesc(username));
+        return "Istoricul a fost șters cu succes!";
+    }
     @GetMapping("/{username}")
     public List<CallHistory> getHistory(@PathVariable String username) {
         return historyRepository.findByUsernameOrderByJoinTimeDesc(username);
